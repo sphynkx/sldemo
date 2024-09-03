@@ -19,13 +19,15 @@ app.config['UPLOAD_FOLDER'] = "static/outs"
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 model_name="best_sl_ds01_seg02-1.pt"
+
 ########### detect part ##########
 
 model = YOLO(model_name)
 
 async def img_predict(filename, n):
     results = []
-    results.append(model.predict(filename, verbose=False, conf=n/10, classes=[0])[0])
+    ## hack for universal excluding of 'pallet' class
+    results.append(model.predict(filename, verbose=False, conf=n/10, classes=[n for n in model.names.keys() if model.names[n] != 'pallet'])[0])
     return results
 
 async def run_tasks(filenames, model=model, api=False, tasks=10, indent=4):
@@ -47,12 +49,13 @@ async def run_tasks(filenames, model=model, api=False, tasks=10, indent=4):
         tasks = [asyncio.create_task(img_predict(filename, n)) for n in range(tasks)]
         await asyncio.sleep(0)
         async_result = await asyncio.gather(*tasks, return_exceptions=False)
+        stat={}
         for rn, result in enumerate(async_result, 1):
+            print(f"{result[0]=} ; {dir(result[0])=}")
+            stat[rn] = result[0].verbose().split(',')[:-1] ##
             for res in result:
                 blank_image = np.zeros(res.orig_shape+(4,), np.uint8)
                 try:
-##                    ## sum(..., []) is trick for flatten the nested list: from [[x, y]] to [x, y]
-##                    res_dict = {'image' : {'name' : filename, 'predictions' : {rn/10 : {'xy' : sum(res.masks.xy.pop().astype(np.int32).reshape(-1, 1, 2).tolist(), [])}}}}
                     res_dict = {'image' : {'name' : filename, 'predictions' : json.loads(res.tojson()) }}
                     res_list.append(res_dict.copy())
                     for im in res.masks.xy:
@@ -61,10 +64,8 @@ async def run_tasks(filenames, model=model, api=False, tasks=10, indent=4):
 
                 except:
                     cv2.imwrite(f"{app.config['UPLOAD_FOLDER']}/transp_{rn}.png", blank_image)
-#    print('Final: ', res_list)
-#    print('Final (json): \n', json.dumps(res_list, indent=4))
     if api == True:
-        return json.dumps(res_list, indent=indent)
+        return json.dumps(res_list, indent=indent), model.names, stat
 
 ########### /detect part ##########
 
@@ -91,13 +92,13 @@ def root():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             res_list = asyncio.run(run_tasks([f"{app.config['UPLOAD_FOLDER']}/{filename}"], api=True))
-    return render_template("index.html", files=file, values=res_list)
+    return render_template("index.html", files=file, values=res_list[0], classes=res_list[1], stat=res_list[2])
 
 ## Example of request:
 ## curl -s -X POST -F filedata=@code557.jpg http://127.0.0.1:4455/api
 ## or with beautifing:
 ## curl -s -X POST -F filedata=@code706.jpg -F indent=4 http://127.0.0.1:4455/api
-## or wwth full pathname and via external addrrss:
+## or wwth full pathname and via external address:
 ## curl -s -X POST -F filedata=@S:\tmpp\cvat_export\uploads\code5129.jpg -F indent=4 https://cvat.sphynkx.org.ua/api
 @app.route("/api", methods=['GET', 'POST'])
 def api():
@@ -112,7 +113,7 @@ def api():
         res = asyncio.run(run_tasks([f"{app.config['UPLOAD_FOLDER']}/{filename}"], api=True, tasks=10, indent=indent))
     else:
         return json.dumps({"message" : "ERRORA!!"}, indent=indent)
-    return res
+    return res[0]
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=4455, debug=True)
