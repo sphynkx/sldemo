@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Defects Detection</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/my.css') }}">
+</head>
+
+<body>
+<header>
+	<h1>Defects Detection</h1>
+</header>
+
+<p>Load image:</p>
+<form method=post enctype=multipart/form-data>
+	<input type=file name=file>
+	<input type=submit value=Upload>
+</form>
+
+<p><br>
+<h2>Results:</h2>
+
+{% if files.filename  %}
+
+<h1>conf: <input type="range" id="rng" name="rng" min="1" max="10" value="5" step="1" onchange="show_layer(this.value);" style="width:300px;">
+<input type="text" style="font-size:25px; border: none;  outline: none; box-shadow: none; caret-color: transparent;" id="textInput" value="conf=0.5"></h1>
+
+Current image: <b>{{files.filename}}</b><p>
+<div style="position: relative; height: 800px;">
+  <div style="position: absolute; z-index: 100; display: block;"><img src={{ url_for('static', filename='outs/orig.jpg') }} width=80%></div>
+    <div style="position: absolute; z-index: 1; " id="id0" ><img src={{ url_for('static', filename='outs/transp_0.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1; " id="id1" ><img src={{ url_for('static', filename='outs/transp_1.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1; " id="id2" ><img src={{ url_for('static', filename='outs/transp_2.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1; " id="id3" ><img src={{ url_for('static', filename='outs/transp_3.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1000; " id="id4" ><img src={{ url_for('static', filename='outs/transp_4.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1; " id="id5" ><img src={{ url_for('static', filename='outs/transp_5.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1; " id="id6" ><img src={{ url_for('static', filename='outs/transp_6.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1; " id="id7" ><img src={{ url_for('static', filename='outs/transp_7.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1;"  id="id8" ><img src={{ url_for('static', filename='outs/transp_8.png') }} width=80%></div>
+    <div style="position: absolute; z-index: 1;"  id="id9" ><img src={{ url_for('static', filename='outs/transp_9.png') }} width=80%></div>
+</div>
+
+<div style="position: relative;">
+<hr>
+<h3>JSON:</h3>
+<textarea rows="20" cols="100">{{values}}</textarea>
+</div>
+{% endif %}
+
+
+
+<script>
+function show_layer(val) 
+	{
+	rng = document.getElementById("rng").value;
+	document.getElementById('textInput').value="conf="+val/10; 
+
+	for(var i=1; i<=9; i++)
+		{
+		document.getElementById(`id${i}`).style.zIndex="2";
+		}
+	document.getElementById("id"+val).style.zIndex="200";
+	}
+</script>
+  </body>
+</html>
