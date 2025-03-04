@@ -3,6 +3,8 @@
 App based on Python + JS + Flask + YOLO + OpenCV + numpy + asyncio
 
 
+
+
 ### Requiements:
 
 - Flask==3.0.3
